@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.css" integrity="sha384-knaESGLxlQRSHWSJ+ZbTX6/L1bJZWBsBYGb2O+g64XHFuO7CbIj9Pkf1aaVXzIZJ" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.js" integrity="sha384-7u+OeKP8De/qfWU/3s5KUDC2wvwPe+d5GwojxjiwFJJpHAp38wQFtz3tr2QNGidv" crossorigin="anonymous"></script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+        <title>TeXit </title>
+        <link rel="shortcut icon" href="teXit.ico" type="image/x-icon">
+
+        <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+    </head>
+    <body>
+        <div id="katex-container">
+            <div class="prettyprint lang-tex" id="katex-editor" contenteditable="true" spellcheck="false" placeholder="type some katex formula"></div>
+            <div id="katex-render"></div>
+        </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const Render = document.getElementById("katex-render");
+                const Editor = document.getElementById("katex-editor");
+
+                init(Render, Editor); 
+
+                Editor.onkeydown = (e)=>{
+                    console.log(e.key)
+                    const IsBadKeys = (e.key == "Backspace" || e.key == "AltGraph" || e.key == "Shift" || e.key == "Control" || e.key == "Enter" || e.key == "ArrowUp" || e.key == "ArrowDown" || e.key == "ArrowLeft" || e.key == "ArrowRight");
+                    setTimeout(()=>{
+                        if(Editor.innerText){
+                            if(!IsBadKeys) {
+                                document.getElementById("cursorPos")?.remove();
+                                let { anchorOffset, anchorNode } = document.getSelection();
+                                let cursorPosElement = document.createElement("span");
+                                cursorPosElement.id = "cursorPos";
+                                anchorNode.parentNode.insertBefore(cursorPosElement, anchorNode.nextSibling)
+
+                                lexer(Editor);
+
+                                setCursor(document.getElementById("cursorPos"), 0); 
+                            }   
+
+                            try{
+                                katex.render(String.raw`${Editor.innerText}`, Render, {
+                                    throwOnError: true,
+                                    displayMode: true
+                                });
+                                localStorage.setItem("katex-editor", Editor.innerText);
+                            } catch (err) {
+                                Render.innerHTML = "<span class='katex-error'>" + err.message + "</span>";
+                            }
+                        }
+                    }, 10)
+                };
+
+                Editor.onchange = () => {
+                    console.log("l")
+                }
+
+                lexer(Editor);
+            });
+
+            const init = (Render, Editor) => {
+                katex.render(String.raw`${localStorage.getItem("katex-editor")}`, Render, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+
+                Editor.innerText = localStorage.getItem("katex-editor");
+            };
+
+            const lexer = (element) => {
+                var Editor = element;
+                const rCommands = /(\\\w+|\\+)/g;
+                const rArguments = /({|})/g;
+                const rEnvironments = /({^})/g;
+                ///(\\begin\{(\w+\*|\w+))/g;                 
+
+                var commands = Editor.innerText.matchAll(rCommands);
+                Editor.innerHTML = Editor.innerHTML.replaceAll(rCommands, "<span class='command'>$1</span>");
+
+                for (const match of commands) {
+                    //console.log(`Found ${match[0]} start=${match.index} end=${match.index + match[0].length}.`);
+                }
+
+                var args = Editor.innerText.matchAll(rArguments);
+                //console.log(Editor.innerText.replaceAll(rArguments, "<span class='punc'>$1</span>"));
+                Editor.innerHTML = Editor.innerHTML.replaceAll(rArguments, "<span class='punc' contenteditable='false'>$1</span>");
+
+                for (const match of args){
+                    //console.log(`Found ${match[0]} start=${match.index} end=${match.index + match[0].length}.`);
+                }
+
+                var envirs = Editor.innerText.matchAll(rEnvironments);
+
+                for (const match of envirs){
+                    //console.log(`Found ${match[0]} start=${match.index} end=${match.index + match[0].length}.`);
+                }
+            }
+
+            const setCursor = (textNode, pos) => {
+                // https://www.geeksforgeeks.org/how-to-set-cursor-position-in-content-editable-element-using-javascript/
+                let range = document.createRange();
+
+                range.setStart(textNode, pos);
+                range.collapse(true);
+
+                document.getSelection()?.removeAllRanges();
+                document.getSelection()?.addRange(range);
+            }
+        </script>
+
+        <style>
+            body{
+                margin: 0;
+            }
+            #katex-container{
+                display: flex;
+            }
+            
+            #katex-render{
+                width: 100%;
+
+                padding-top: 20px;
+            }
+
+            #katex-editor{
+                width: 100%;
+                font-family: "Cascadia Code";
+                font-weight: 400;
+                font-size: 14px;
+                line-height: 1.5em;
+
+                background-color: #edf2f7;
+
+                padding: 20px;
+
+                min-height: 200px;
+            }
+            #katex-editor:hover{
+                cursor: text;
+            }
+            #katex-editor:focus{
+                outline: none;
+            }
+            #katex-editor[placeholder]:empty::before{
+                content: attr(placeholder);
+                color: #d9d9d9;
+            }
+
+            .katex-error{
+                font-family: "Consolas";
+                color: #f7403a;
+
+                background-color: #f7403a33;
+            }
+
+            .punc{
+                color: #CCC;
+            }
+            .command{
+                color: #e0005a;
+            }
+        </style>
+    </body>
+</html>
